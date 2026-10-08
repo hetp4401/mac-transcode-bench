@@ -1,0 +1,26 @@
+name: bench
+on: workflow_dispatch
+jobs:
+  bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: the machine
+        run: |
+          sw_vers
+          sysctl -n machdep.cpu.brand_string hw.ncpu hw.memsize
+          system_profiler SPDisplaysDataType | sed -n 1,25p
+      - name: ffmpeg
+        run: |
+          brew install ffmpeg > /tmp/brew.log 2>&1 || tail -20 /tmp/brew.log
+          ffmpeg -hide_banner -version | head -1
+          ffmpeg -hide_banner -hwaccels
+          ffmpeg -hide_banner -encoders | grep -i videotoolbox || true
+          ffmpeg -hide_banner -filters | grep -E " (zscale|tonemap|scale_vt) " || true
+      - name: benchmark
+        run: python3 bench.py
